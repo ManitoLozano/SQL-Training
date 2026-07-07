@@ -70,3 +70,93 @@ WHERE EXISTS(
 	SELECT * FROM Orders o
 	where o.CustomerId = c.Id AND o.TotalAmount > 10000
 )
+
+-- 1) Listar todos os pedidos
+select * from Orders o 
+
+-- 2) Listar todos os pedidos por Id, Name, CustomerId, EmployeeId, Status, TotalAmount e CreatedAt
+select o.Id, o.Name, o.CustomerId, o.EmployeeId, o.Status, o.TotalAmount, o.CreatedAt from Orders o 
+
+-- 3) Listar os pedidos ordenados por data mais recente.
+select * from Orders o 
+order by o.CreatedAt 
+
+-- 4) Listar os 50 pedidos mais recentes
+select TOP(50)* from Orders o 
+order by o.CreatedAt
+
+-- 5) Listar pedidos por status
+select
+	o.Status,
+	count(*) as TotalPedidos
+from Orders o
+group by o.Status
+
+-- 6) Listar pedidos com valor maior que 1000.
+select * from Orders o 
+where o.TotalAmount > 1000
+
+-- 7) Listar pedidos criados em determinado periodo.
+select
+	count(*) as TotalPedidos,
+	o.CreatedAt 
+from Orders o 
+group by o.CreatedAt 
+
+-- 8) Listar pedidos com TotalAmount zerado ou nulo caso existam.
+select COUNT(*) as TotalPedidosNulos from Orders o 
+where o.TotalAmount = 0 or o.TotalAmount is null
+
+-- 10) Listar status distintos dos pedidos.
+select distinct o.Status from Orders o
+
+-- 11) Listar contabilização de pedidos que possuem pagamento.
+select COUNT(*) as TotalPedidosPagos, o.Status from Orders o
+where o.Status = 'Paid'
+group by o.Status
+
+-- 12) Listar contabilização de pedidos sem pagamento.
+select count(*) as TotalPedidosSemPagamento, o.Status from Orders o 
+where o.Status <> 'Paid'
+group by o.Status 
+
+-- 13) Listar contabilização de todos os pedidos que possuem itens.
+select count(*) as PedidosQuePossuemItens from Orders o 
+where exists(
+	select * from OrderItems oi 
+	where oi.OrderId = o.Id
+)
+
+-- 14) Listar contabilização de todos os pedidos sem itens, caso existam.
+select count(*) as PedidosQueNaoPossuemItens from Orders o 
+where not exists(
+	select * from OrderItems oi 
+	where oi.OrderId = o.Id
+)
+
+-- 15) Listar pedidos, e em uma coluna extra, o total calculdado pelos itens.
+select
+	*,
+	(
+		select coalesce(sum(oi.TotalPrice), 0) from OrderItems oi 
+		where oi.OrderId = o.Id
+	) as TotalCalculadoNosItens
+from Orders o
+
+-- 16) Listar contabilização dos pedidos cujo total é diferente da soma dos itens.
+select count(*) as TotalPedidos from Orders o 
+where o.TotalAmount <> (
+	select coalesce(sum(oi.TotalPrice), 0) from OrderItems oi 
+	where oi.OrderId = o.Id
+)
+
+-- 17) Listar contabilização de pedidos do cliente e o nome do cliente que mais comprou em coluna extra.
+select TOP 1
+	count(*) as TotalPedidos,
+	c.Name as NomeCliente
+from Orders o 
+inner join Customers c
+	on c.Id = o.CustomerId
+where o.Status = 'Paid'	
+group by c.Name, c.Id
+order by count(*) desc
